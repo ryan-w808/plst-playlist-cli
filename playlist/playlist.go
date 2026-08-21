@@ -72,6 +72,40 @@ func Parse(r io.Reader) (*Playlist, error) {
 	return p, nil
 }
 
+// Write serializes p to w in the extended M3U format. Tracks with a Title
+// or a Duration get an #EXTINF line ahead of their path; tracks with
+// neither are written as a bare path, so a playlist that was parsed and
+// written back out without modification round-trips line for line.
+func Write(w io.Writer, p *Playlist) error {
+	bw := bufio.NewWriter(w)
+
+	if _, err := bw.WriteString("#EXTM3U\n"); err != nil {
+		return err
+	}
+	for _, t := range p.Tracks {
+		if t.Title != "" || t.Duration != 0 {
+			seconds := t.Duration.Seconds()
+			if _, err := fmt.Fprintf(bw, "#EXTINF:%s,%s\n", formatSeconds(seconds), t.Title); err != nil {
+				return err
+			}
+		}
+		if _, err := fmt.Fprintln(bw, t.Path); err != nil {
+			return err
+		}
+	}
+	return bw.Flush()
+}
+
+// formatSeconds renders a duration in seconds the way EXTINF expects:
+// as an integer when there's no fractional part, since that's what
+// almost every M3U file in the wild uses and what parseExtinf round-trips.
+func formatSeconds(seconds float64) string {
+	if seconds == float64(int64(seconds)) {
+		return strconv.FormatInt(int64(seconds), 10)
+	}
+	return strconv.FormatFloat(seconds, 'f', -1, 64)
+}
+
 // parseExtinf parses a line of the form:
 //
 //	#EXTINF:<seconds>,<title>

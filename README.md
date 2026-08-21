@@ -78,10 +78,17 @@ for _, t := range list.Tracks {
 }
 ```
 
+`playlist.Write` goes the other direction, serializing a `*Playlist` back
+into the extended M3U format:
+
+```go
+err := playlist.Write(os.Stdout, list)
+```
+
 ## Status
 
-Early. Parsing works; writing playlists back out and format conversion
-don't exist yet.
+Early. Parsing and writing work; format conversion (e.g. to PLS) doesn't
+exist yet.
 
 ## License
 
