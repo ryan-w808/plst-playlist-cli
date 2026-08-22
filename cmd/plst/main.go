@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -19,7 +20,17 @@ func main() {
 }
 
 func run(args []string) error {
-	r, closeFn, err := open(args)
+	fs := flag.NewFlagSet("plst", flag.ContinueOnError)
+	dedupe := fs.Bool("dedupe", false, "drop duplicate tracks, keeping the first occurrence of each path")
+	fs.Usage = func() {
+		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [file.m3u | -]")
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	r, closeFn, err := open(fs.Args())
 	if err != nil {
 		return err
 	}
@@ -28,6 +39,9 @@ func run(args []string) error {
 	list, err := playlist.Parse(r)
 	if err != nil {
 		return err
+	}
+	if *dedupe {
+		list.Dedupe()
 	}
 
 	for i, t := range list.Tracks {
@@ -51,7 +65,7 @@ func open(args []string) (io.Reader, func() error, error) {
 		return os.Stdin, func() error { return nil }, nil
 	}
 	if len(args) > 1 {
-		return nil, nil, fmt.Errorf("usage: plst [file.m3u | -]")
+		return nil, nil, fmt.Errorf("usage: plst [-dedupe] [file.m3u | -]")
 	}
 
 	f, err := os.Open(args[0])

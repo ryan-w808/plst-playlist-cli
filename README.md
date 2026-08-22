@@ -39,6 +39,13 @@ From stdin, no argument at all (same behavior as `-`):
 $ cat playlists/*.m3u | plst
 ```
 
+Drop duplicate tracks (by path, keeping the first occurrence) with `-dedupe`,
+useful when concatenating several playlists that share songs:
+
+```
+$ cat playlists/*.m3u | plst -dedupe
+```
+
 ## Playlist format
 
 `plst` understands the two M3U conventions in the wild:
@@ -84,6 +91,12 @@ into the extended M3U format:
 ```go
 err := playlist.Write(os.Stdout, list)
 ```
+
+`list.Dedupe()` drops tracks whose path repeats one already seen earlier
+in the list, keeping the first occurrence. Paths are compared with
+`filepath.Clean` applied, not resolved against a base directory yet, so
+two relative paths that point at the same file after resolution aren't
+caught until that step lands.
 
 ## Status
 

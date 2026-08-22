@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -94,6 +95,27 @@ func Write(w io.Writer, p *Playlist) error {
 		}
 	}
 	return bw.Flush()
+}
+
+// Dedupe removes tracks whose path repeats one already seen earlier in the
+// playlist, keeping the first occurrence. Paths are compared after
+// filepath.Clean, so "a/b.mp3" and "a/./b.mp3" count as the same track;
+// they're compared as given, not resolved against a base directory, so
+// two different relative paths that happen to point at the same file
+// after resolution are still treated as distinct until that resolution
+// step exists.
+func (p *Playlist) Dedupe() {
+	seen := make(map[string]bool, len(p.Tracks))
+	out := p.Tracks[:0]
+	for _, t := range p.Tracks {
+		key := filepath.Clean(t.Path)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, t)
+	}
+	p.Tracks = out
 }
 
 // formatSeconds renders a duration in seconds the way EXTINF expects:
