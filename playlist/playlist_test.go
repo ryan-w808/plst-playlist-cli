@@ -1,6 +1,9 @@
 package playlist
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestDedupe(t *testing.T) {
 	p := &Playlist{
@@ -36,5 +39,32 @@ func TestDedupeEmpty(t *testing.T) {
 	p.Dedupe()
 	if len(p.Tracks) != 0 {
 		t.Errorf("got %d tracks, want 0", len(p.Tracks))
+	}
+}
+
+func TestResolve(t *testing.T) {
+	p := &Playlist{
+		Tracks: []Track{
+			{Path: "song1.mp3"},
+			{Path: "../shared/song2.mp3"},
+			{Path: filepath.FromSlash("/absolute/song3.mp3")},
+			{Path: "http://example.com/stream.mp3"},
+			{Path: ""},
+		},
+	}
+
+	p.Resolve(filepath.FromSlash("/music/rock"))
+
+	want := []string{
+		filepath.FromSlash("/music/rock/song1.mp3"),
+		filepath.FromSlash("/music/shared/song2.mp3"),
+		filepath.FromSlash("/absolute/song3.mp3"),
+		"http://example.com/stream.mp3",
+		"",
+	}
+	for i, path := range want {
+		if p.Tracks[i].Path != path {
+			t.Errorf("track %d: got path %q, want %q", i, p.Tracks[i].Path, path)
+		}
 	}
 }

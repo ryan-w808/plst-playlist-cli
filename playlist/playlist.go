@@ -118,6 +118,38 @@ func (p *Playlist) Dedupe() {
 	p.Tracks = out
 }
 
+// Resolve rewrites relative track paths so they're relative to baseDir
+// instead of whatever directory the playlist happens to be read from.
+// Callers typically pass the directory containing the playlist file, so
+// that "../music/song.mp3" in the playlist resolves against the playlist's
+// own location rather than the process's working directory. Paths that are
+// already absolute, or that look like a URL, are left untouched.
+func (p *Playlist) Resolve(baseDir string) {
+	for i, t := range p.Tracks {
+		if t.Path == "" || filepath.IsAbs(t.Path) || isURL(t.Path) {
+			continue
+		}
+		p.Tracks[i].Path = filepath.Join(baseDir, t.Path)
+	}
+}
+
+// isURL reports whether path looks like it starts with a URL scheme
+// (e.g. "http://", "file://") rather than a filesystem path. It's a
+// heuristic, not a full URL parse: good enough to avoid mangling stream
+// URLs, which are common in playlists alongside local file paths.
+func isURL(path string) bool {
+	scheme, _, ok := strings.Cut(path, "://")
+	if !ok || scheme == "" {
+		return false
+	}
+	for _, r := range scheme {
+		if r == '/' || r == '\\' {
+			return false
+		}
+	}
+	return true
+}
+
 // formatSeconds renders a duration in seconds the way EXTINF expects:
 // as an integer when there's no fractional part, since that's what
 // almost every M3U file in the wild uses and what parseExtinf round-trips.
