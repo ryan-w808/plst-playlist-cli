@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math/rand"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -116,6 +117,16 @@ func (p *Playlist) Dedupe() {
 		out = append(out, t)
 	}
 	p.Tracks = out
+}
+
+// Shuffle randomizes the order of p.Tracks in place using r as the source
+// of randomness. Passing a rand.Rand seeded by the caller makes the result
+// reproducible, which matters for a playlist tool: "shuffle" should still
+// be able to give the same order back if someone wants to repeat a session.
+func (p *Playlist) Shuffle(r *rand.Rand) {
+	r.Shuffle(len(p.Tracks), func(i, j int) {
+		p.Tracks[i], p.Tracks[j] = p.Tracks[j], p.Tracks[i]
+	})
 }
 
 // Resolve rewrites relative track paths so they're relative to baseDir

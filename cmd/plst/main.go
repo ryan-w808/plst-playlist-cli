@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -23,8 +24,10 @@ func main() {
 func run(args []string) error {
 	fs := flag.NewFlagSet("plst", flag.ContinueOnError)
 	dedupe := fs.Bool("dedupe", false, "drop duplicate tracks, keeping the first occurrence of each path")
+	shuffle := fs.Bool("shuffle", false, "randomize track order")
+	seed := fs.Int64("seed", 0, "seed for -shuffle, for a reproducible order; 0 picks a new random seed each run")
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [file.m3u | -]")
+		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u | -]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -46,6 +49,13 @@ func run(args []string) error {
 	}
 	if *dedupe {
 		list.Dedupe()
+	}
+	if *shuffle {
+		s := *seed
+		if s == 0 {
+			s = time.Now().UnixNano()
+		}
+		list.Shuffle(rand.New(rand.NewSource(s)))
 	}
 
 	for i, t := range list.Tracks {
@@ -72,7 +82,7 @@ func open(args []string) (r io.Reader, closeFn func() error, baseDir string, err
 		return os.Stdin, func() error { return nil }, "", nil
 	}
 	if len(args) > 1 {
-		return nil, nil, "", fmt.Errorf("usage: plst [-dedupe] [file.m3u | -]")
+		return nil, nil, "", fmt.Errorf("usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u | -]")
 	}
 
 	f, err := os.Open(args[0])

@@ -46,6 +46,14 @@ useful when concatenating several playlists that share songs:
 $ cat playlists/*.m3u | plst -dedupe
 ```
 
+Randomize track order with `-shuffle`. Pass `-seed` to get the same order
+back on a later run instead of a fresh random one each time:
+
+```
+$ plst -shuffle my-mix.m3u
+$ plst -shuffle -seed 7 my-mix.m3u
+```
+
 ## Playlist format
 
 `plst` understands the two M3U conventions in the wild:
