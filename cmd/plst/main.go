@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"plst/playlist"
@@ -27,20 +28,24 @@ func run(args []string) error {
 	shuffle := fs.Bool("shuffle", false, "randomize track order")
 	seed := fs.Int64("seed", 0, "seed for -shuffle, for a reproducible order; 0 picks a new random seed each run")
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u | -]")
+		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u|file.pls | -]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	r, closeFn, baseDir, err := open(fs.Args())
+	r, closeFn, baseDir, isPLS, err := open(fs.Args())
 	if err != nil {
 		return err
 	}
 	defer closeFn()
 
-	list, err := playlist.Parse(r)
+	parse := playlist.Parse
+	if isPLS {
+		parse = playlist.ParsePLS
+	}
+	list, err := parse(r)
 	if err != nil {
 		return err
 	}
@@ -76,18 +81,21 @@ func run(args []string) error {
 // stdin by default when no argument is given at all. The returned baseDir
 // is the directory of the playlist file, used to resolve the relative
 // track paths it contains; it's empty for stdin, which has no location of
-// its own to resolve against.
-func open(args []string) (r io.Reader, closeFn func() error, baseDir string, err error) {
+// its own to resolve against. isPLS reports whether the file has a .pls
+// extension; stdin is always treated as M3U, since there's no name to go
+// by and M3U is by far the more common format to pipe around.
+func open(args []string) (r io.Reader, closeFn func() error, baseDir string, isPLS bool, err error) {
 	if len(args) == 0 || args[0] == "-" {
-		return os.Stdin, func() error { return nil }, "", nil
+		return os.Stdin, func() error { return nil }, "", false, nil
 	}
 	if len(args) > 1 {
-		return nil, nil, "", fmt.Errorf("usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u | -]")
+		return nil, nil, "", false, fmt.Errorf("usage: plst [-dedupe] [-shuffle] [-seed n] [file.m3u|file.pls | -]")
 	}
 
 	f, err := os.Open(args[0])
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, "", false, err
 	}
-	return f, f.Close, filepath.Dir(args[0]), nil
+	pls := strings.EqualFold(filepath.Ext(args[0]), ".pls")
+	return f, f.Close, filepath.Dir(args[0]), pls, nil
 }

@@ -1,6 +1,6 @@
 # plst
 
-A small Go library and CLI for reading M3U/M3U8 audio playlists.
+A small Go library and CLI for reading M3U/M3U8 and PLS audio playlists.
 
 Most tools that touch playlists assume the file is sitting on disk, which
 is annoying the moment you want to pipe one in from `curl`, a zip extractor,
@@ -78,6 +78,21 @@ song2.mp3
 The two styles can be mixed in the same file. Lines starting with `#` that
 aren't `#EXTINF` (like the `#EXTM3U` header) are skipped.
 
+`plst` also reads the PLS format, an older INI-style convention still common
+for internet radio streams:
+
+```
+[playlist]
+File1=song1.mp3
+Title1=Intro
+Length1=42
+NumberOfEntries=1
+Version=2
+```
+
+The CLI picks the format by file extension: `.pls` is parsed as PLS,
+everything else (including stdin) as M3U.
+
 ## Library
 
 The parser is in `playlist` and works on anything that implements
@@ -100,6 +115,10 @@ into the extended M3U format:
 err := playlist.Write(os.Stdout, list)
 ```
 
+`playlist.ParsePLS` and `playlist.WritePLS` are the PLS equivalents, using
+the same `Track`/`Playlist` types, so a playlist can be read in one format
+and written out in the other.
+
 `list.Dedupe()` drops tracks whose path repeats one already seen earlier
 in the list, keeping the first occurrence. Paths are compared with
 `filepath.Clean` applied, not resolved against a base directory yet, so
@@ -108,8 +127,7 @@ caught until that step lands.
 
 ## Status
 
-Early. Parsing and writing work; format conversion (e.g. to PLS) doesn't
-exist yet.
+Early. Parsing and writing work for both M3U and PLS.
 
 ## License
 
