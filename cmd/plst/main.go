@@ -27,10 +27,11 @@ func run(args []string) error {
 	dedupe := fs.Bool("dedupe", false, "drop duplicate tracks, keeping the first occurrence of each path")
 	shuffle := fs.Bool("shuffle", false, "randomize track order")
 	seed := fs.Int64("seed", 0, "seed for -shuffle, for a reproducible order; 0 picks a new random seed each run")
+	sortBy := fs.String("sort", "", "sort tracks before output, \"title\" or \"path\"; unset leaves the playlist's own order")
 	write := fs.String("write", "", "write the resulting playlist to this path instead of printing a listing; \"-\" writes to stdout")
 	format := fs.String("format", "", "output format for -write, \"m3u\" or \"pls\"; defaults to the -write file's extension, or m3u if that's not conclusive")
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [-shuffle] [-seed n] [-write path] [-format m3u|pls] [file.m3u|file.pls | -]")
+		fmt.Fprintln(fs.Output(), "usage: plst [-dedupe] [-shuffle] [-seed n] [-sort title|path] [-write path] [-format m3u|pls] [file.m3u|file.pls | -]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -40,6 +41,14 @@ func run(args []string) error {
 	outPLS, err := resolveFormat(*write, *format)
 	if err != nil {
 		return err
+	}
+	if *sortBy != "" && *shuffle {
+		return fmt.Errorf("-sort and -shuffle can't be used together")
+	}
+	switch *sortBy {
+	case "", "title", "path":
+	default:
+		return fmt.Errorf("unknown -sort %q: want \"title\" or \"path\"", *sortBy)
 	}
 
 	r, closeFn, baseDir, isPLS, err := open(fs.Args())
@@ -68,6 +77,12 @@ func run(args []string) error {
 			s = time.Now().UnixNano()
 		}
 		list.Shuffle(rand.New(rand.NewSource(s)))
+	}
+	switch *sortBy {
+	case "title":
+		list.SortByTitle()
+	case "path":
+		list.SortByPath()
 	}
 
 	if *write != "" {
@@ -142,7 +157,7 @@ func open(args []string) (r io.Reader, closeFn func() error, baseDir string, isP
 		return os.Stdin, func() error { return nil }, "", false, nil
 	}
 	if len(args) > 1 {
-		return nil, nil, "", false, fmt.Errorf("usage: plst [-dedupe] [-shuffle] [-seed n] [-write path] [-format m3u|pls] [file.m3u|file.pls | -]")
+		return nil, nil, "", false, fmt.Errorf("usage: plst [-dedupe] [-shuffle] [-seed n] [-sort title|path] [-write path] [-format m3u|pls] [file.m3u|file.pls | -]")
 	}
 
 	f, err := os.Open(args[0])

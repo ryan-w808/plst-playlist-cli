@@ -94,6 +94,60 @@ func TestShuffleEmpty(t *testing.T) {
 	}
 }
 
+func TestSortByTitle(t *testing.T) {
+	p := &Playlist{
+		Tracks: []Track{
+			{Path: "c.mp3", Title: "Charlie"},
+			{Path: "a.mp3", Title: "Alpha"},
+			{Path: "notitle.mp3"},
+			{Path: "b.mp3", Title: "Bravo"},
+		},
+	}
+
+	p.SortByTitle()
+
+	want := []string{"a.mp3", "b.mp3", "c.mp3", "notitle.mp3"}
+	for i, path := range want {
+		if p.Tracks[i].Path != path {
+			t.Errorf("track %d: got path %q, want %q", i, p.Tracks[i].Path, path)
+		}
+	}
+}
+
+func TestSortByPath(t *testing.T) {
+	p := &Playlist{
+		Tracks: []Track{
+			{Path: "c.mp3"},
+			{Path: "a.mp3"},
+			{Path: "b.mp3"},
+		},
+	}
+
+	p.SortByPath()
+
+	want := []string{"a.mp3", "b.mp3", "c.mp3"}
+	for i, path := range want {
+		if p.Tracks[i].Path != path {
+			t.Errorf("track %d: got path %q, want %q", i, p.Tracks[i].Path, path)
+		}
+	}
+}
+
+func TestSortByTitleStable(t *testing.T) {
+	p := &Playlist{
+		Tracks: []Track{
+			{Path: "first.mp3", Title: "Same"},
+			{Path: "second.mp3", Title: "Same"},
+		},
+	}
+
+	p.SortByTitle()
+
+	if p.Tracks[0].Path != "first.mp3" || p.Tracks[1].Path != "second.mp3" {
+		t.Errorf("equal titles should keep original order, got %+v", p.Tracks)
+	}
+}
+
 func TestResolve(t *testing.T) {
 	p := &Playlist{
 		Tracks: []Track{

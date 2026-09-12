@@ -54,6 +54,13 @@ $ plst -shuffle my-mix.m3u
 $ plst -shuffle -seed 7 my-mix.m3u
 ```
 
+Sort tracks with `-sort`, either `title` or `path` (tracks with no title fall
+back to their path so they still sort predictably):
+
+```
+$ plst -sort title my-mix.m3u
+```
+
 Convert between formats with `-write`, which takes the place of the normal
 printed listing. The output format comes from the `-write` path's extension,
 or from `-format` if that's ambiguous or you want to override it:

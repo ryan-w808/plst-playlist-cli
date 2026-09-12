@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -127,6 +128,29 @@ func (p *Playlist) Shuffle(r *rand.Rand) {
 	r.Shuffle(len(p.Tracks), func(i, j int) {
 		p.Tracks[i], p.Tracks[j] = p.Tracks[j], p.Tracks[i]
 	})
+}
+
+// SortByTitle sorts p.Tracks by title, falling back to path for tracks
+// with no title (the plain M3U and bare-FileN-PLS case) so they still get
+// a stable, predictable order relative to each other.
+func (p *Playlist) SortByTitle() {
+	sort.SliceStable(p.Tracks, func(i, j int) bool {
+		return sortKey(p.Tracks[i]) < sortKey(p.Tracks[j])
+	})
+}
+
+// SortByPath sorts p.Tracks by path.
+func (p *Playlist) SortByPath() {
+	sort.SliceStable(p.Tracks, func(i, j int) bool {
+		return p.Tracks[i].Path < p.Tracks[j].Path
+	})
+}
+
+func sortKey(t Track) string {
+	if t.Title != "" {
+		return t.Title
+	}
+	return t.Path
 }
 
 // Resolve rewrites relative track paths so they're relative to baseDir
